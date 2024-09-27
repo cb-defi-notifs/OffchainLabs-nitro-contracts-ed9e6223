@@ -6,30 +6,9 @@
 pragma solidity >=0.6.9 <0.9.0;
 
 import "./IBridge.sol";
-import "./IDelayedMessageProvider.sol";
-import "./ISequencerInbox.sol";
+import "./IInboxBase.sol";
 
-interface IInbox is IDelayedMessageProvider {
-    function bridge() external view returns (IBridge);
-
-    function sequencerInbox() external view returns (ISequencerInbox);
-
-    /**
-     * @notice Send a generic L2 message to the chain
-     * @dev This method is an optimization to avoid having to emit the entirety of the messageData in a log. Instead validators are expected to be able to parse the data from the transaction's input
-     *      This method will be disabled upon L1 fork to prevent replay attacks on L2
-     * @param messageData Data of the message being sent
-     */
-    function sendL2MessageFromOrigin(bytes calldata messageData) external returns (uint256);
-
-    /**
-     * @notice Send a generic L2 message to the chain
-     * @dev This method can be used to send any type of message that doesn't require L1 validation
-     *      This method will be disabled upon L1 fork to prevent replay attacks on L2
-     * @param messageData Data of the message being sent
-     */
-    function sendL2Message(bytes calldata messageData) external returns (uint256);
-
+interface IInbox is IInboxBase {
     function sendL1FundedUnsignedTransaction(
         uint256 gasLimit,
         uint256 maxFeePerGas,
@@ -44,23 +23,6 @@ interface IInbox is IDelayedMessageProvider {
         address to,
         bytes calldata data
     ) external payable returns (uint256);
-
-    function sendUnsignedTransaction(
-        uint256 gasLimit,
-        uint256 maxFeePerGas,
-        uint256 nonce,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external returns (uint256);
-
-    function sendContractTransaction(
-        uint256 gasLimit,
-        uint256 maxFeePerGas,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external returns (uint256);
 
     /**
      * @dev This method can only be called upon L1 fork and will not alias the caller
@@ -101,18 +63,6 @@ interface IInbox is IDelayedMessageProvider {
     ) external returns (uint256);
 
     /**
-     * @notice Get the L1 fee for submitting a retryable
-     * @dev This fee can be paid by funds already in the L2 aliased address or by the current message value
-     * @dev This formula may change in the future, to future proof your code query this method instead of inlining!!
-     * @param dataLength The length of the retryable's calldata, in bytes
-     * @param baseFee The block basefee when the retryable is included in the chain, if 0 current block.basefee will be used
-     */
-    function calculateRetryableSubmissionFee(uint256 dataLength, uint256 baseFee)
-        external
-        view
-        returns (uint256);
-
-    /**
      * @notice Deposit eth from L1 to L2 to address of the sender if sender is an EOA, and to its aliased address if the sender is a contract
      * @dev This does not trigger the fallback function when receiving in the L2 side.
      *      Look into retryable tickets if you are interested in this functionality.
@@ -127,8 +77,8 @@ interface IInbox is IDelayedMessageProvider {
      * @param to destination L2 contract address
      * @param l2CallValue call value for retryable L2 message
      * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-     * @param excessFeeRefundAddress gasLimit x maxFeePerGas - execution cost gets credited here on L2 balance
-     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+     * @param excessFeeRefundAddress the address which receives the difference between execution fee paid and the actual execution cost. In case this address is a contract, funds will be received in its alias on L2.
+     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled. In case this address is a contract, funds will be received in its alias on L2.
      * @param gasLimit Max gas deducted from user's L2 balance to cover L2 execution. Should not be set to 1 (magic value used to trigger the RetryableData error)
      * @param maxFeePerGas price bid for L2 execution. Should not be set to 1 (magic value used to trigger the RetryableData error)
      * @param data ABI encoded data of L2 message
@@ -155,7 +105,7 @@ interface IInbox is IDelayedMessageProvider {
      * @param to destination L2 contract address
      * @param l2CallValue call value for retryable L2 message
      * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-     * @param excessFeeRefundAddress gasLimit x maxFeePerGas - execution cost gets credited here on L2 balance
+     * @param excessFeeRefundAddress the address which receives the difference between execution fee paid and the actual execution cost
      * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
      * @param gasLimit Max gas deducted from user's L2 balance to cover L2 execution. Should not be set to 1 (magic value used to trigger the RetryableData error)
      * @param maxFeePerGas price bid for L2 execution. Should not be set to 1 (magic value used to trigger the RetryableData error)
@@ -173,14 +123,6 @@ interface IInbox is IDelayedMessageProvider {
         bytes calldata data
     ) external payable returns (uint256);
 
-    // ---------- onlyRollupOrOwner functions ----------
-
-    /// @notice pauses all inbox functionality
-    function pause() external;
-
-    /// @notice unpauses all inbox functionality
-    function unpause() external;
-
     // ---------- initializer ----------
 
     /**
@@ -188,6 +130,4 @@ interface IInbox is IDelayedMessageProvider {
      *      this is used to fix the storage slots
      */
     function postUpgradeInit(IBridge _bridge) external;
-
-    function initialize(IBridge _bridge, ISequencerInbox _sequencerInbox) external;
 }

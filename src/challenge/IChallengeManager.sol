@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -46,6 +46,19 @@ interface IChallengeManager {
         IBridge bridge_,
         IOneStepProofEntry osp_
     ) external;
+
+    function postUpgradeInit(
+        IOneStepProofEntry osp_,
+        bytes32 condRoot,
+        IOneStepProofEntry condOsp
+    ) external;
+
+    /// @notice Get the default osp, which is used for all wasm module roots that don't have a conditional OSP set
+    ///         Use getOsp(wasmModuleRoot) to get the OSP for a specific wasm module root
+    function osp() external view returns (IOneStepProofEntry);
+
+    /// @notice Get the OSP for a given wasm module root
+    function getOsp(bytes32 wasmModuleRoot) external view returns (IOneStepProofEntry);
 
     function createChallenge(
         bytes32 wasmModuleRoot_,

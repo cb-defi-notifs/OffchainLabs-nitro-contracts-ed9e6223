@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -8,8 +8,9 @@ import "./InboxStub.sol";
 import {BadSequencerMessageNumber} from "../libraries/Error.sol";
 
 import "../bridge/IBridge.sol";
+import "../bridge/IEthBridge.sol";
 
-contract BridgeStub is IBridge {
+contract BridgeStub is IBridge, IEthBridge {
     struct InOutInfo {
         uint256 index;
         bool allowed;
@@ -31,6 +32,9 @@ contract BridgeStub is IBridge {
     address public sequencerInbox;
     uint256 public override sequencerReportedSubMessageCount;
 
+    address public nativeToken;
+    uint8 public nativeTokenDecimals;
+
     function setSequencerInbox(address _sequencerInbox) external override {
         sequencerInbox = _sequencerInbox;
         emit SequencerInboxUpdated(_sequencerInbox);
@@ -41,6 +45,10 @@ contract BridgeStub is IBridge {
     }
 
     function allowedOutboxes(address) external pure override returns (bool) {
+        revert("NOT_IMPLEMENTED");
+    }
+
+    function updateRollupAddress(IOwnable) external pure {
         revert("NOT_IMPLEMENTED");
     }
 

@@ -5,6 +5,12 @@ import '@nomiclabs/hardhat-etherscan'
 import '@typechain/hardhat'
 import 'solidity-coverage'
 import 'hardhat-gas-reporter'
+import 'hardhat-contract-sizer'
+import 'hardhat-ignore-warnings'
+// import '@tovarishfin/hardhat-yul';
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const solidity = {
   compilers: [
@@ -18,7 +24,17 @@ const solidity = {
       },
     },
   ],
-  overrides: {},
+  overrides: {
+    'src/rollup/RollupUserLogic.sol': {
+      version: '0.8.9',
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 0,
+        },
+      },
+    },
+  },
 }
 
 if (process.env['INTERFACE_TESTER_SOLC_VERSION']) {
@@ -88,6 +104,12 @@ module.exports = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    sepolia: {
+      url: 'https://sepolia.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
     rinkeby: {
       url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']
@@ -102,6 +124,12 @@ module.exports = {
     },
     arbGoerliRollup: {
       url: 'https://goerli-rollup.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbSepolia: {
+      url: 'https://sepolia-rollup.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
@@ -126,11 +154,13 @@ module.exports = {
     apiKey: {
       mainnet: process.env['ETHERSCAN_API_KEY'],
       goerli: process.env['ETHERSCAN_API_KEY'],
+      sepolia: process.env['ETHERSCAN_API_KEY'],
       rinkeby: process.env['ETHERSCAN_API_KEY'],
       arbitrumOne: process.env['ARBISCAN_API_KEY'],
       arbitrumTestnet: process.env['ARBISCAN_API_KEY'],
       nova: process.env['NOVA_ARBISCAN_API_KEY'],
       arbGoerliRollup: process.env['ARBISCAN_API_KEY'],
+      arbSepolia: process.env['ARBISCAN_API_KEY'],
     },
     customChains: [
       {
@@ -149,6 +179,14 @@ module.exports = {
           browserURL: 'https://goerli.arbiscan.io/',
         },
       },
+      {
+        network: 'arbSepolia',
+        chainId: 421614,
+        urls: {
+          apiURL: 'https://sepolia-explorer.arbitrum.io/api',
+          browserURL: 'https://sepolia-explorer.arbitrum.io/',
+        },
+      },
     ],
   },
   mocha: {
@@ -161,4 +199,7 @@ module.exports = {
     outDir: 'build/types',
     target: 'ethers-v5',
   },
+  contractSizer: {
+    strict: true
+  }
 }

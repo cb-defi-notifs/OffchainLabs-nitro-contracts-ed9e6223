@@ -1,5 +1,5 @@
 // Copyright 2021-2023, Offchain Labs, Inc.
-// For license information, see https://github.com/OffchainLabs/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity >=0.4.21 <0.9.0;
@@ -36,6 +36,8 @@ interface ArbDebug {
     );
 
     function customRevert(uint64 number) external pure;
+
+    function panic() external;
 
     function legacyError() external pure;
 

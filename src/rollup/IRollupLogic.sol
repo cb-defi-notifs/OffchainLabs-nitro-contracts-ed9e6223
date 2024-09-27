@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -23,6 +23,12 @@ interface IRollupUserAbs is IRollupCore, IOwnable {
     function rejectNextNode(address stakerAddress) external;
 
     function confirmNextNode(bytes32 blockHash, bytes32 sendRoot) external;
+
+    function fastConfirmNextNode(
+        bytes32 blockHash,
+        bytes32 sendRoot,
+        bytes32 nodeHash
+    ) external;
 
     function stakeOnExistingNode(uint64 nodeNum, bytes32 nodeHash) external;
 

@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.4;
@@ -7,8 +7,11 @@ pragma solidity ^0.8.4;
 /// @dev Init was already called
 error AlreadyInit();
 
-/// Init was called with param set to zero that must be nonzero
+/// @dev Init was called with param set to zero that must be nonzero
 error HadZeroInit();
+
+/// @dev Thrown when post upgrade init validation fails
+error BadPostUpgradeInit();
 
 /// @dev Thrown when non owner tries to access an only-owner function
 /// @param sender The msg.sender who is not the owner
@@ -61,16 +64,18 @@ error NotOutbox(address sender);
 /// @param outbox address of outbox being set
 error InvalidOutboxSet(address outbox);
 
+/// @dev The provided token address isn't valid
+/// @param token address of token being set
+error InvalidTokenSet(address token);
+
+/// @dev Call to this specific address is not allowed
+/// @param target address of the call receiver
+error CallTargetNotAllowed(address target);
+
+/// @dev Call that changes the balance of ERC20Bridge is not allowed
+error CallNotAllowed();
+
 // Inbox Errors
-
-/// @dev The contract is paused, so cannot be paused
-error AlreadyPaused();
-
-/// @dev The contract is unpaused, so cannot be unpaused
-error AlreadyUnpaused();
-
-/// @dev The contract is paused
-error Paused();
 
 /// @dev msg.value sent to the inbox isn't high enough
 error InsufficientValue(uint256 expected, uint256 actual);
@@ -104,6 +109,12 @@ error NotForked();
 
 /// @dev The provided gasLimit is larger than uint64
 error GasLimitTooLarge();
+
+/// @dev The provided amount cannot be adjusted to 18 decimals due to overflow
+error AmountTooLarge(uint256 amount);
+
+/// @dev Number of native token's decimals is restricted to enable conversions to 18 decimals
+error NativeTokenDecimalsTooLarge(uint256 decimals);
 
 // Outbox Errors
 
@@ -153,11 +164,35 @@ error BadSequencerNumber(uint256 stored, uint256 received);
 /// @dev The sequence message number provided to this message was inconsistent with the previous one
 error BadSequencerMessageNumber(uint256 stored, uint256 received);
 
-/// @dev The batch data has the inbox authenticated bit set, but the batch data was not authenticated by the inbox
-error DataNotAuthenticated();
-
 /// @dev Tried to create an already valid Data Availability Service keyset
 error AlreadyValidDASKeyset(bytes32);
 
 /// @dev Tried to use or invalidate an already invalid Data Availability Service keyset
 error NoSuchKeyset(bytes32);
+
+/// @dev Thrown when the provided address is not the designated batch poster manager
+error NotBatchPosterManager(address);
+
+/// @dev Thrown when a data blob feature is attempted to be used on a chain that doesnt support it
+error DataBlobsNotSupported();
+
+/// @dev Thrown when an init param was supplied as empty
+error InitParamZero(string name);
+
+/// @dev Thrown when data hashes where expected but not where present on the tx
+error MissingDataHashes();
+
+/// @dev Thrown when rollup is not updated with updateRollupAddress
+error RollupNotChanged();
+
+/// @dev Unsupported header flag was provided
+error InvalidHeaderFlag(bytes1);
+
+/// @dev SequencerInbox and Bridge are not in the same feeToken/ETH mode
+error NativeTokenMismatch();
+
+/// @dev Thrown when a deprecated function is called
+error Deprecated();
+
+/// @dev Thrown when any component of maxTimeVariation is over uint64
+error BadMaxTimeVariation();

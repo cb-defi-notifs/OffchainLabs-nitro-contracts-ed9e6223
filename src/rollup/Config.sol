@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -9,7 +9,7 @@ import "../state/Machine.sol";
 import "../bridge/ISequencerInbox.sol";
 import "../bridge/IBridge.sol";
 import "../bridge/IOutbox.sol";
-import "../bridge/IInbox.sol";
+import "../bridge/IInboxBase.sol";
 import "./IRollupEventInbox.sol";
 import "./IRollupLogic.sol";
 import "../challenge/IChallengeManager.sol";
@@ -31,7 +31,7 @@ struct Config {
 struct ContractDependencies {
     IBridge bridge;
     ISequencerInbox sequencerInbox;
-    IInbox inbox;
+    IInboxBase inbox;
     IOutbox outbox;
     IRollupEventInbox rollupEventInbox;
     IChallengeManager challengeManager;

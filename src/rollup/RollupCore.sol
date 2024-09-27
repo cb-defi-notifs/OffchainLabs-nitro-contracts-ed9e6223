@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -19,6 +19,7 @@ import "../bridge/IOutbox.sol";
 
 import "../precompiles/ArbSys.sol";
 
+import "../libraries/ArbitrumChecker.sol";
 import {NO_CHAL_INDEX} from "../libraries/Constants.sol";
 
 abstract contract RollupCore is IRollupCore, PausableUpgradeable {
@@ -32,7 +33,7 @@ abstract contract RollupCore is IRollupCore, PausableUpgradeable {
     uint256 public baseStake;
     bytes32 public wasmModuleRoot;
 
-    IInbox public inbox;
+    IInboxBase public inbox;
     IBridge public bridge;
     IOutbox public outbox;
     ISequencerInbox public sequencerInbox;
@@ -76,18 +77,12 @@ abstract contract RollupCore is IRollupCore, PausableUpgradeable {
     uint64 internal constant GENESIS_NODE = 0;
 
     bool public validatorWhitelistDisabled;
+    address public anyTrustFastConfirmer;
 
     // If the chain this RollupCore is deployed on is an Arbitrum chain.
-    bool internal immutable _hostChainIsArbitrum;
+    bool internal immutable _hostChainIsArbitrum = ArbitrumChecker.runningOnArbitrum();
     // If the chain RollupCore is deployed on, this will contain the ArbSys.blockNumber() at each node's creation.
     mapping(uint64 => uint256) internal _nodeCreatedAtArbSysBlock;
-
-    constructor() {
-        (bool ok, bytes memory data) = address(100).staticcall(
-            abi.encodeWithSelector(ArbSys.arbOSVersion.selector)
-        );
-        _hostChainIsArbitrum = ok && data.length == 32;
-    }
 
     /**
      * @notice Get a storage reference to the Node for the given node index

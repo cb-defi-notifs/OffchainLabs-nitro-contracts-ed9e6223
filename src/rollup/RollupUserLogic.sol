@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
@@ -24,6 +24,11 @@ abstract contract AbsRollupUserLogic is
 
     modifier onlyValidator() {
         require(isValidator[msg.sender] || validatorWhitelistDisabled, "NOT_VALIDATOR");
+        _;
+    }
+
+    modifier whenNotPausedOrDeprecated() {
+        require(!paused() || address(bridge.rollup()) != address(this), "PAUSED_AND_ACTIVE");
         _;
     }
 
@@ -111,29 +116,28 @@ abstract contract AbsRollupUserLogic is
         emit NodeRejected(firstUnresolvedNodeNum);
     }
 
-    /**
-     * @notice Confirm the next unresolved node
-     * @param blockHash The block hash at the end of the assertion
-     * @param sendRoot The send root at the end of the assertion
-     */
-    function confirmNextNode(bytes32 blockHash, bytes32 sendRoot)
-        external
-        onlyValidator
-        whenNotPaused
-    {
+    function _confirmNextNode(
+        bytes32 blockHash,
+        bytes32 sendRoot,
+        bool isFastConfirm
+    ) internal whenNotPaused {
         requireUnresolvedExists();
 
         uint64 nodeNum = firstUnresolvedNode();
         Node storage node = getNodeStorage(nodeNum);
 
-        // Verify the block's deadline has passed
-        node.requirePastDeadline();
+        if (!isFastConfirm) {
+            // Verify the block's deadline has passed
+            node.requirePastDeadline();
+        }
 
         // Check that prev is latest confirmed
         assert(node.prevNum == latestConfirmed());
 
         Node storage prevNode = getNodeStorage(node.prevNum);
-        prevNode.requirePastChildConfirmDeadline();
+        if (!isFastConfirm) {
+            prevNode.requirePastChildConfirmDeadline();
+        }
 
         removeOldZombies(0);
 
@@ -148,6 +152,31 @@ abstract contract AbsRollupUserLogic is
         );
 
         confirmNode(nodeNum, blockHash, sendRoot);
+    }
+
+    /**
+     * @notice Confirm the next unresolved node
+     * @param blockHash The block hash at the end of the assertion
+     * @param sendRoot The send root at the end of the assertion
+     */
+    function confirmNextNode(bytes32 blockHash, bytes32 sendRoot) external onlyValidator {
+        _confirmNextNode(blockHash, sendRoot, false);
+    }
+
+    /**
+     * @notice This allow anyTrustFastConfirmer to confirm next node regardless of deadline
+     *         the anyTrustFastConfirmer is supposed to be set only on an AnyTrust chain to
+     *         a contract that can call this function when received sufficient signatures
+     *         node hash must be match the node to be confirmed to protect against reorgs
+     */
+    function fastConfirmNextNode(
+        bytes32 blockHash,
+        bytes32 sendRoot,
+        bytes32 nodeHash
+    ) external {
+        require(msg.sender == anyTrustFastConfirmer, "NFC");
+        require(nodeHash == getNodeStorage(firstUnresolvedNode()).nodeHash, "WH");
+        _confirmNextNode(blockHash, sendRoot, true);
     }
 
     /**
@@ -234,7 +263,12 @@ abstract contract AbsRollupUserLogic is
      * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
-    function returnOldDeposit(address stakerAddress) external override onlyValidator whenNotPaused {
+    function returnOldDeposit(address stakerAddress)
+        external
+        override
+        onlyValidator
+        whenNotPausedOrDeprecated
+    {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
@@ -258,7 +292,7 @@ abstract contract AbsRollupUserLogic is
      * @notice Reduce the amount staked for the sender (difference between initial amount staked and target is creditted back to the sender).
      * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
      */
-    function reduceDeposit(uint256 target) external onlyValidator whenNotPaused {
+    function reduceDeposit(uint256 target) external onlyValidator whenNotPausedOrDeprecated {
         requireUnchallengedStaker(msg.sender);
         uint256 currentRequired = currentRequiredStake();
         if (target < currentRequired) {
@@ -659,7 +693,13 @@ contract RollupUserLogic is AbsRollupUserLogic, IRollupUser {
     /**
      * @notice Withdraw uncommitted funds owned by sender from the rollup chain
      */
-    function withdrawStakerFunds() external override onlyValidator whenNotPaused returns (uint256) {
+    function withdrawStakerFunds()
+        external
+        override
+        onlyValidator
+        whenNotPausedOrDeprecated
+        returns (uint256)
+    {
         uint256 amount = withdrawFunds(msg.sender);
         // This is safe because it occurs after all checks and effects
         // solhint-disable-next-line avoid-low-level-calls
@@ -731,7 +771,13 @@ contract ERC20RollupUserLogic is AbsRollupUserLogic, IRollupUserERC20 {
     /**
      * @notice Withdraw uncommitted funds owned by sender from the rollup chain
      */
-    function withdrawStakerFunds() external override onlyValidator whenNotPaused returns (uint256) {
+    function withdrawStakerFunds()
+        external
+        override
+        onlyValidator
+        whenNotPausedOrDeprecated
+        returns (uint256)
+    {
         uint256 amount = withdrawFunds(msg.sender);
         // This is safe because it occurs after all checks and effects
         require(IERC20Upgradeable(stakeToken).transfer(msg.sender, amount), "TRANSFER_FAILED");

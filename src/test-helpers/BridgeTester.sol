@@ -1,5 +1,5 @@
 // Copyright 2021-2022, Offchain Labs, Inc.
-// For license information, see https://github.com/nitro/blob/master/LICENSE
+// For license information, see https://github.com/OffchainLabs/nitro-contracts/blob/main/LICENSE
 // SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.4;
@@ -16,6 +16,7 @@ import {
     InvalidOutboxSet
 } from "../libraries/Error.sol";
 import "../bridge/IBridge.sol";
+import "../bridge/IEthBridge.sol";
 import "../bridge/Messages.sol";
 import "../libraries/DelegateCallAware.sol";
 
@@ -26,7 +27,7 @@ import "../libraries/DelegateCallAware.sol";
  * Since the escrow is held here, this contract also contains a list of allowed
  * outboxes that can make calls from here and withdraw this escrow.
  */
-contract BridgeTester is Initializable, DelegateCallAware, IBridge {
+contract BridgeTester is Initializable, DelegateCallAware, IBridge, IEthBridge {
     using AddressUpgradeable for address;
 
     struct InOutInfo {
@@ -44,6 +45,9 @@ contract BridgeTester is Initializable, DelegateCallAware, IBridge {
 
     IOwnable public rollup;
     address public sequencerInbox;
+
+    address public nativeToken;
+    uint8 public nativeTokenDecimals;
 
     modifier onlyRollupOrOwner() {
         if (msg.sender != address(rollup)) {
@@ -71,6 +75,10 @@ contract BridgeTester is Initializable, DelegateCallAware, IBridge {
     function initialize(IOwnable rollup_) external initializer {
         _activeOutbox = EMPTY_ACTIVEOUTBOX;
         rollup = rollup_;
+    }
+
+    function updateRollupAddress(IOwnable _rollup) external {
+        rollup = _rollup;
     }
 
     function activeOutbox() public view returns (address) {
